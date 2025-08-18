@@ -42,13 +42,12 @@
     </div>
 </template>
 <script>
-import axios from 'axios';
 export default {
     name: 'Result',
     data() {
         return {
             // You can add any data properties here if needed
-            response: this.response || {} ,// Initialize response from props or empty object
+            // localresponse: this.response || {} ,// Initialize response from props or empty object
             processing: false // To manage loading state if needed
         };
     },
@@ -68,38 +67,42 @@ export default {
             // Implement the logic to download the file
             // This could involve creating a link element and triggering a download
             this.processing = true; // Set processing to true while downloading
-
-            axios({
-                url: 'http://127.0.0.1:10000/api/fetch', // Replace with your API endpoint
-                method: 'POST',
-                data: {
-                    // Include any necessary data for the download request
-                    // For example, you might need to send the response ID or other parameters
-                    "file": this.response.export_file // Assuming response has an id property
-                },
-                responseType: 'blob' // Important for downloading files
-            }).then((response) => {
-                // Create a blob from the response data
-                const blob = new Blob([response.data], { type: 'application/octet-stream' });
-                const url = window.URL.createObjectURL(blob);
-                
-                // Create a link element to trigger the download
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', this.response.export_file); // Set the file name
-
-                // Append to the body and trigger the download
-                document.body.appendChild(link);
-                link.click();
-
-                // Clean up
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                this.processing = false;
-            }).catch((error) => {
-                console.error('Download error:', error);
-            });
+            const url = import.meta.env.VITE_API_URL
             
+            fetch(`${url}fetch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ file: this.response.export_file }) // Assuming response contains fileName
+            }).then(response => {
+                if (response.ok) {
+                    return response.blob(); // Convert the response to a Blob
+                } else {
+                    throw new Error('Network response was not ok.');
+                }
+            }).then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = this.response.export_file; // Set the file name for download
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url); // Clean up the URL object
+            }).catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            }).finally(() => {
+                this.processing = false; // Reset processing state
+            });
+
+        }
+    },
+    mounted() {
+        // You can perform any initialization logic here if needed
+        // For example, you might want to fetch some initial data or set up event listeners
+        if (!this.response || Object.keys(this.response).length === 0) {
+            console.warn('No response data provided to Result component.');
         }
     }
     

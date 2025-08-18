@@ -13,6 +13,17 @@ dist
 dist-ssr
 coverage
 *.local
+# Build output
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.development
+.env.test
+.env.production
+# Dependency directories
+
 
 /cypress/videos/
 /cypress/screenshots/
@@ -26,5 +37,6 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
 
 *.tsbuildinfo

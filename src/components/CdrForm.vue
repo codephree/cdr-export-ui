@@ -4,11 +4,8 @@
         <div v-show="isResult">
                 <Result @go-back="resetForm" :response="response"></Result> <!-- Show Result component conditionally based on isResult -->
         </div>
-        <ul>
-            <li v-for="error in errors">{{ error }}</li>
-        </ul>
         <div v-show="!isResult">
-        <div class="form-group mt-5" :class="{ error: v$.linkcodes.$errors.length }">
+        <div class="form-group mt-5">
                     <label class="form-label" for="exportType">Links code</label>
                     <textarea class="form-control" v-model="linkcodes" name="links" id="links" cols="10" rows="5" required></textarea>
                 </div>
@@ -45,17 +42,8 @@
 
 <script>
 import Result from './Result.vue';
-import axios from 'axios';
-import { useVuelidate } from '@vuelidate/core'
-import { required, email } from '@vuelidate/validators'
-
-
 export default {
     name: 'CDRForm',
-    setup() {
-        const v$ = useVuelidate();
-        return { v$ };
-    },
     components: {
         Result
     },
@@ -65,16 +53,11 @@ export default {
             linkcodes: '',
             linkcodesArray: [],
             startDate: '',
+            resp: {}, // To hold the response from the API
             response: {}, // To hold the response from the API
             endDate: new Date(), // To hold the end date,
             processing: false, // To manage loading state if needed
-            errors: [] // To hold any error messages
         };
-    },
-    validations: {
-        linkcodes: { required },
-        startDate: { required },
-        endDate: { required }
     },
     methods: {
        async  exportCdr(event) {
@@ -83,24 +66,32 @@ export default {
             // Simulate an API call or processing logic
             try {  
                  this.linkcodesArray = this.linkcodes.split('\n').map(code => code.trim()).filter(code => code); 
-                 const response = await axios.post('http://127.0.0.1:10000/api/', {
-                    "linkcodes": this.linkcodesArray,
-                    "fromDate": this.startDate,
-                    "endDate": this.endDate,
-                    "exportType": "0"
-                }, {
+                
+                 const url = import.meta.env.VITE_API_URL
+                 await fetch(`${url}`, {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*', // Ensure CORS is handled if needed
-                        'Accept': 'application/json'
-                    }
-                    });
-                
-                if (response.status !== 200) {
-                                        throw new Error('Failed to export CDR'); }
-                this.response = response.data; // Store the response data
+                        'Access-Control-Allow-Origin': '*' // Ensure CORS is handled if needed
+                    },
+                    body: JSON.stringify({
+                        linkcodes: this.linkcodesArray,
+                        fromDate: this.startDate,
+                        endDate: this.endDate,
+                        exportType: "0" // Assuming exportType is required
+                    })
 
-                this.isResult = true; // Show the result component on success
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                }).then(data => {
+                    this.resp = data; // Store the response
+                    this.response = data; // Set the response to be displayed in Result component
+                    this.isResult = true; // Show the Result component
+                });
+    
             } catch (error) {
                 console.error('Error exporting CDR:', error);
                 this.isResult = true; // Show error message if needed
@@ -122,6 +113,7 @@ export default {
         this.startDate = new Date(currentDate.setDate(thirthDay)).toISOString().split('T')[0];
         // this.startDate =  // Set start date to today
         this.endDate = new Date().toISOString().split('T')[0]; // Set
+        
     }
 };
 </script>
